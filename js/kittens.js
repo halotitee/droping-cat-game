@@ -27,15 +27,22 @@ var images = {};
 
 
 
+class Entity {
+    render(ctx) {
+        ctx.drawImage(this.sprite, this.x, this.y);
+    }
+}
+
 
 
 // This section is where you will be doing most of your coding
-class Enemy {
+class Enemy extends Entity {
     constructor(xPos) {
+        super();
         this.x = xPos;
         this.y = -ENEMY_HEIGHT;
         this.sprite = images['enemy.png'];
-
+        
         // Each enemy should have a different speed
         this.speed = Math.random() / 2 + 0.25;
     }
@@ -44,16 +51,21 @@ class Enemy {
         this.y = this.y + timeDiff * this.speed;
     }
 
-    render(ctx) {
+
+    /*render(ctx) {
         ctx.drawImage(this.sprite, this.x, this.y);
-    }
+    }*/
 }
 
-class Player {
+class Player extends Entity {
     constructor() {
+        super();
         this.x = 2 * PLAYER_WIDTH;
         this.y = GAME_HEIGHT - PLAYER_HEIGHT - 10;
         this.sprite = images['player.png'];
+        // add var for player lives
+        this.playerLives = 3;
+            
     }
 
     // This method is called by the game engine when left/right arrows are pressed
@@ -65,10 +77,15 @@ class Player {
             this.x = this.x + PLAYER_WIDTH;
         }
     }
-
-    render(ctx) {
-        ctx.drawImage(this.sprite, this.x, this.y);
+           
+    // live functions  
+    changeLives(change){
+        this.playerLives += change;
     }
+                
+    /*render(ctx) {
+        ctx.drawImage(this.sprite, this.x, this.y);
+    }*/
 }
 
 
@@ -120,7 +137,7 @@ class Engine {
 
         var enemySpot;
         // Keep looping until we find a free enemy spot at random
-        while (!enemySpot || this.enemies[enemySpot]) {
+        while (!enemySpot && this.enemies[enemySpot]) {
             enemySpot = Math.floor(Math.random() * enemySpots);
         }
 
@@ -150,7 +167,6 @@ class Engine {
     During each execution of the function, we will update the positions of all game entities
     It's also at this point that we will check for any collisions between the game entities
     Collisions will often indicate either a player death or an enemy kill
-
     In order to allow the game objects to self-determine their behaviors, gameLoop will call the `update` method of each entity
     To account for the fact that we don't always have 60 frames per second, gameLoop will send a time delta argument to `update`
     You should use this parameter to scale your update appropriately
@@ -162,7 +178,8 @@ class Engine {
 
         // Increase the score!
         this.score += timeDiff;
-
+        
+        
         // Call update on all enemies
         this.enemies.forEach(enemy => enemy.update(timeDiff));
 
@@ -170,7 +187,7 @@ class Engine {
         this.ctx.drawImage(images['stars.png'], 0, 0); // draw the star bg
         this.enemies.forEach(enemy => enemy.render(this.ctx)); // draw the enemies
         this.player.render(this.ctx); // draw the player
-
+        
         // Check if any enemies should die
         this.enemies.forEach((enemy, enemyIdx) => {
             if (enemy.y > GAME_HEIGHT) {
@@ -185,13 +202,15 @@ class Engine {
             this.ctx.font = 'bold 30px Impact';
             this.ctx.fillStyle = '#ffffff';
             this.ctx.fillText(this.score + ' GAME OVER', 5, 30);
+            this.ctx.fillText('Lives: ' + this.player.playerLives, 5, 70) //display lives
         }
         else {
             // If player is not dead, then draw the score
             this.ctx.font = 'bold 30px Impact';
             this.ctx.fillStyle = '#ffffff';
             this.ctx.fillText(this.score, 5, 30);
-
+            this.ctx.fillText('Lives: ' + this.player.playerLives, 5, 70) //display lives
+            
             // Set the time marker and redraw
             this.lastFrame = Date.now();
             requestAnimationFrame(this.gameLoop);
@@ -199,12 +218,29 @@ class Engine {
     }
 
     isPlayerDead() {
-        // TODO: fix this function!
-        return false;
+        // 
+        var flag = false
+        this.enemies.forEach((enemy, enemyIdx) => {
+            if (
+                enemy.y > this.player.y - ENEMY_HEIGHT * 0.7
+                && enemy.y < this.player.y - 5
+                && enemy.x === this.player.x
+            ) {
+                // everytime player's dead
+                this.player.changeLives(-1);
+                
+                delete this.enemies[enemyIdx];
+                //console.log(this.player.changeLives)
+            }
+        });
+            //until lives become 0, the game ends.
+        if (this.player.playerLives === 0) {
+            flag = true;
+        }
+        
+        return flag;
     }
 }
-
-
 
 
 
